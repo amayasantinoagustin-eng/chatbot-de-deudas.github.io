@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot de Deudas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+        <div class="chat-header">
+            <h2>Asistente de Gestión de Deudas</h2>
+        </div>
+        <div class="chat-box" id="chatBox">
+            <div class="bot-msg">¡Hola! Soy tu asistente de deudas. ¿En qué puedo ayudarte hoy?</div>
+        </div>
+        <div class="options">
+            <button class="option-btn" onclick="consultarDeuda()">Ver mi deuda</button>
+            <button class="option-btn" onclick="iniciarProcesoPago()">Pagar mi deuda</button>
+            <button class="option-btn" onclick="verHistorial()">Ver mi historial</button>
+        </div>
+
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        
+        // Variables globales
+        let deudaActual = 500;
+        let metodoPagoSeleccionado = '';
+        let montoAPagar = 0;
+        let procesoPagoActivo = false;
+        
+        // Historial de transacciones
+        let historial = [
+            { 
+                fecha: '01/10/2024', 
+                tipo: 'Pago', 
+                monto: 200.00, 
+                descripcion: 'Pago mensual',
+                deudaAnterior: 700,
+                deudaNueva: 500
+            },
+            { 
+                fecha: '15/10/2024', 
+                tipo: 'Compra', 
+                monto: 300.00, 
+                descripcion: 'Compra en supermercado'
+            },
+            { 
+                fecha: '10/09/2024', 
+                tipo: 'Pago', 
+                monto: 150.00, 
+                descripcion: 'Pago parcial'
+            }
+        ];
+
+        function addMessage(message, isUser = false) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = isUser ? 'user-msg' : 'bot-msg';
+            msgDiv.textContent = message;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function addHTMLMessage(htmlContent, isUser = false) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = isUser ? 'user-msg' : 'bot-msg';
+            msgDiv.innerHTML = htmlContent;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function consultarDeuda() {
+            addMessage("¿Cuál es mi deuda actual?", true);
+            setTimeout(() => {
+                addMessage(`Tu deuda actual es de $${deudaActual.toFixed(2)}\nFecha de vencimiento: 15 de Noviembre de 2025`);
+            }, 800);
+        }
+
+        function iniciarProcesoPago() {
+            if (procesoPagoActivo) {
+                addMessage("Ya hay un proceso de pago en curso. Por favor completa o cancela el pago actual.", true);
+                return;
+            }
+            
+            addMessage("Quiero pagar mi deuda", true);
+            procesoPagoActivo = true;
+            
+            setTimeout(() => {
+                mostrarOpcionesMetodoPago();
+            }, 600);
+        }
+
+        function mostrarOpcionesMetodoPago() {
+            const timestamp = Date.now();
+            const htmlContent = `
+                <div class="payment-step">
+                    <p><strong>Selecciona tu método de pago:</strong></p>
+                    <div class="payment-methods">
+                        <button class="method-btn" onclick="seleccionarMetodoPago('transferencia', ${timestamp})">
+                            Transferencia Bancaria
+                        </button>
+                        <button class="method-btn" onclick="seleccionarMetodoPago('tarjeta', ${timestamp})">
+                            Tarjeta de Crédito
+                        </button>
+                        <button class="method-btn" onclick="seleccionarMetodoPago('efectivo', ${timestamp})">
+                            Efectivo en Sucursal
+                        </button>
+                    </div>
+                    <button class="cancel-btn" onclick="cancelarProcesoPago()">Cancelar</button>
+                </div>
+            `;
+            addHTMLMessage(htmlContent);
+        }
+
+        function seleccionarMetodoPago(metodo, timestamp) {
+            const metodos = {
+                'transferencia': 'Transferencia Bancaria',
+                'tarjeta': 'Tarjeta de Crédito',
+                'efectivo': 'Efectivo en Sucursal'
+            };
+            
+            metodoPagoSeleccionado = metodos[metodo];
+            addMessage(`Método seleccionado: ${metodoPagoSeleccionado}`, true);
+            
+            setTimeout(() => {
+                solicitarMontoPago(timestamp);
+            }, 600);
+        }
+
+        function solicitarMontoPago(timestamp) {
+            const htmlContent = `
+                <div class="amount-step" id="amount-step-${timestamp}">
+                    <p>Has seleccionado: <strong>${metodoPagoSeleccionado}</strong></p>
+                    <p>Tu deuda actual es: <strong>$${deudaActual.toFixed(2)}</strong></p>
+                    <p>¿Cuánto deseas pagar?</p>
+                    <input type="number" 
+                           class="amount-input" 
+                           id="monto-input-${timestamp}" 
+                           placeholder="Ej: 150.00" 
+                           min="1" 
+                           max="${deudaActual}" 
+                           step="0.01">
+                    <div class="amount-buttons">
+                        <button class="quick-amount" onclick="setQuickAmount(100, ${timestamp})">$100</button>
+                        <button class="quick-amount" onclick="setQuickAmount(200, ${timestamp})">$200</button>
+                        <button class="quick-amount" onclick="setQuickAmount(${deudaActual}, ${timestamp})">Pago Total</button>
+                    </div>
+                    <button class="confirm-btn" onclick="procesarPago(${timestamp})">Confirmar Pago</button>
+                    <button class="cancel-btn" onclick="cancelarProcesoPago()">Cancelar</button>
+                </div>
+            `;
+            addHTMLMessage(htmlContent);
+        }
+
+        function setQuickAmount(monto, timestamp) {
+            const input = document.getElementById(`monto-input-${timestamp}`);
+            if (input) {
+                input.value = monto;
+            }
+        }
+
+        function procesarPago(timestamp) {
+            const input = document.getElementById(`monto-input-${timestamp}`);
+            
+            if (!input) {
+                addMessage("Error en el proceso de pago. Por favor intenta nuevamente.", true);
+                procesoPagoActivo = false;
+                return;
+            }
+            
+            montoAPagar = parseFloat(input.value);
+
+            if (!input.value || isNaN(montoAPagar) || montoAPagar <= 0) {
+                addMessage("Por favor ingresa un monto válido mayor a 0", true);
+                return;
+            }
+
+            if (montoAPagar > deudaActual) {
+                addMessage(`El monto no puede ser mayor a tu deuda actual ($${deudaActual.toFixed(2)})`, true);
+                return;
+            }
+
+            addMessage(`Confirmar pago de $${montoAPagar.toFixed(2)} con ${metodoPagoSeleccionado}`, true);
+            
+            setTimeout(() => {
+                finalizarProcesoPago();
+            }, 1000);
+        }
+
+        function finalizarProcesoPago() {
+            const deudaAnterior = deudaActual;
+            deudaActual -= montoAPagar;
+            deudaActual = Math.max(0, deudaActual);
+            
+            // Agregar al historial
+            const nuevaTransaccion = {
+                fecha: new Date().toLocaleDateString('es-ES'),
+                tipo: 'Pago',
+                monto: montoAPagar,
+                descripcion: `Pago con ${metodoPagoSeleccionado}`,
+                deudaAnterior: deudaAnterior,
+                deudaNueva: deudaActual
+            };
+            
+            historial.unshift(nuevaTransaccion);
+            
+            const htmlContent = `
+                <div class="payment-success">
+                    <p><strong>¡Pago procesado exitosamente!</strong></p>
+                    <p><strong>Detalles del pago:</strong></p>
+                    <p>Método: ${metodoPagoSeleccionado}</p>
+                    <p>Monto pagado: <strong>$${montoAPagar.toFixed(2)}</strong></p>
+                    <p>Deuda anterior: $${deudaAnterior.toFixed(2)}</p>
+                    <p>Nueva deuda: <strong>$${deudaActual.toFixed(2)}</strong></p>
+                    <p>Fecha: ${nuevaTransaccion.fecha}</p>
+                    ${deudaActual === 0 ? '<p class="congrats"><strong>Has saldado toda tu deuda.</strong></p>' : ''}
+                </div>
+            `;
+            addHTMLMessage(htmlContent);
+
+            // Reiniciar variables
+            metodoPagoSeleccionado = '';
+            montoAPagar = 0;
+            procesoPagoActivo = false;
+        }
+
+        function cancelarProcesoPago() {
+            addMessage("Cancelar proceso de pago", true);
+            setTimeout(() => {
+                addMessage("Proceso de pago cancelado. ¿En qué más puedo ayudarte?");
+                metodoPagoSeleccionado = '';
+                montoAPagar = 0;
+                procesoPagoActivo = false;
+            }, 600);
+        }
+
+        function verHistorial() {
+            addMessage("Quiero ver mi historial de transacciones", true);
+            setTimeout(() => {
+                mostrarHistorialCompleto();
+            }, 600);
+        }
+
+        function mostrarHistorialCompleto() {
+            let htmlContent = `
+                <div class="historial-container">
+                    <h3>Historial de Transacciones</h3>
+                    <p><strong>Deuda actual: $${deudaActual.toFixed(2)}</strong></p>
+                    <p>Total de transacciones: ${historial.length}</p>
+                    <div class="historial-list">
+            `;
+            
+            if (historial.length === 0) {
+                htmlContent += `<p class="no-transactions">No hay transacciones registradas en el historial.</p>`;
+            } else {
+                historial.forEach((transaccion, index) => {
+                    const esPago = transaccion.tipo === 'Pago';
+                    const icono = esPago ? '⬇️' : '⬆️';
+                    const colorClass = esPago ? 'pago' : 'compra';
+                    
+                    htmlContent += `
+                        <div class="historial-item ${colorClass}">
+                            <div class="transaccion-header">
+                                <span class="transaccion-fecha">${transaccion.fecha}</span>
+                                <span class="transaccion-tipo">${icono} ${transaccion.tipo}</span>
+                            </div>
+                            <div class="transaccion-descripcion">${transaccion.descripcion}</div>
+                            <div class="transaccion-monto ${colorClass}">
+                                ${esPago ? '-' : '+'} $${transaccion.monto.toFixed(2)}
+                            </div>
+                            ${transaccion.deudaAnterior !== undefined ? 
+                                `<div class="deuda-evolucion">
+                                    Deuda: $${transaccion.deudaAnterior.toFixed(2)} → $${transaccion.deudaNueva.toFixed(2)}
+                                </div>` : 
+                                ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            htmlContent += `
+                    </div>
+                </div>
+            `;
+            addHTMLMessage(htmlContent);
+        }
+
+        // Función para agregar compras (simulación)
+        function simularCompra(descripcion, monto) {
+            const nuevaCompra = {
+                fecha: new Date().toLocaleDateString('es-ES'),
+                tipo: 'Compra',
+                monto: monto,
+                descripcion: descripcion,
+                deudaAnterior: deudaActual,
+                deudaNueva: deudaActual + monto
+            };
+            
+            deudaActual += monto;
+            historial.unshift(nuevaCompra);
+            
+            addMessage(`Compra simulada: ${descripcion} - $${monto.toFixed(2)}`, true);
+            setTimeout(() => {
+                addMessage(`Nueva deuda actualizada: $${deudaActual.toFixed(2)}`);
+            }, 800);
+        }
+    </script>
+</body>
+</html>
