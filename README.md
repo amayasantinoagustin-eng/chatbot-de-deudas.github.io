@@ -1,1 +1,1 @@
-codigo simple de cahtbot de deudas con archivo HTML y archivo CSS
+codigo simple de chatbot de deudas con archivo HTML y archivo CSS
